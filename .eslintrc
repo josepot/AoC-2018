@@ -1,0 +1,23 @@
+{
+  "extends": [
+    "eslint:recommended",
+    "prettier"
+  ],
+  "plugins": [
+    "prettier"
+  ],
+  "env": {
+    "es6": true,
+    "node": true
+  },
+  "rules": {
+    "prettier/prettier": ["error", {
+      "singleQuote": true,
+      "trailingComma": "es5",
+      "bracketSpacing": false
+    }],
+    "no-nested-ternary": 0,
+    "no-underscore-dangle": 0,
+    "no-console": 0
+  }
+}
