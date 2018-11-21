@@ -1,10 +1,12 @@
+const {compose: c, init, split} = require('ramda');
 const {promisify} = require('util');
 const fs = require('fs');
 
+const {log} = console;
 const readFile = promisify(fs.readFile);
-const day = process.argv[2];
-const fn = require(`./${day}/solution`);
+const getLines = c(init, split('\n'));
 
-readFile(`./${day}/input`, 'utf-8')
-  .then(fn)
-  .then(x => console.log(x));
+const [, , day, isSecond] = process.argv;
+const fn = require(`./${day}/solution${isSecond ? 2 : ''}`);
+
+readFile(`./${day}/input`, 'utf-8').then(c(log, fn, getLines));
