@@ -1,13 +1,23 @@
-const toInt = x => parseInt(x, 10);
+const {head, map, pipe} = require('ramda');
+const {circularLinkedList} = require('../utils/linkedLists');
 
-module.exports = inputLines => {
-  const values = inputLines.map(toInt);
-  const data = new Set();
-  let acc = 0;
+const findRepeatedFrequency = initialNode => {
+  let node = initialNode;
+  let frequency = 0;
+  const visited = new Set();
 
-  for (let i = 0; i < Infinity; i++) {
-    acc += values[i % values.length];
-    if (data.has(acc)) return acc;
-    data.add(acc);
+  while (!visited.has(frequency)) {
+    visited.add(frequency);
+    frequency += node.value;
+    node = node.next;
   }
+
+  return frequency;
 };
+
+module.exports = pipe(
+  map(parseInt),
+  circularLinkedList,
+  head,
+  findRepeatedFrequency
+);
