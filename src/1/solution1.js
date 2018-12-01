@@ -1,5 +1,3 @@
-const {add} = require('ramda');
+const {compose: c, map, sum} = require('ramda');
 
-const toInt = x => parseInt(x, 10);
-
-module.exports = inputLines => inputLines.map(toInt).reduce(add);
+module.exports = c(sum, map(parseInt));
