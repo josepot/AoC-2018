@@ -6,7 +6,7 @@ const {log} = console;
 const readFile = promisify(fs.readFile);
 const getLines = c(init, split('\n'));
 
-const [, , day, isSecond] = process.argv;
-const fn = require(`./${day}/solution${isSecond ? 2 : ''}`);
+const [, , day, suffix] = process.argv;
+const fn = require(`./${day}/solution${suffix || ''}`);
 
 readFile(`./${day}/input`, 'utf-8').then(c(log, fn, getLines));
