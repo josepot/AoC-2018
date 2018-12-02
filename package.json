@@ -7,6 +7,7 @@
   "author": "Josep M Sobrepere",
   "license": "MIT",
   "dependencies": {
+    "immutable": "^4.0.0-rc.12",
     "priorityqueuejs": "^1.0.0",
     "ramda": "^0.26.0",
     "rxjs": "^6.3.3"
