@@ -1,19 +1,28 @@
-const tree = {};
+const {
+  compose: c,
+  converge,
+  head,
+  isEmpty,
+  pipe,
+  prop,
+  reduceWhile,
+} = require('ramda');
 
-const addWord = (word, root = tree) => {
+const addWord = (word, root) => {
   if (word.length === 0) return root;
   const [firstChar, ...rest] = word;
-  root[firstChar] = addWord(rest, root[firstChar] || {});
-  return root;
+  return Object.assign({}, root, {
+    [firstChar]: addWord(rest, root[firstChar] || {}),
+  });
 };
 
 const findSimilar = (word, parent, tolerance, result = '') => {
-  if (tolerance === -1) return [null];
+  if (tolerance === -1) return [];
 
   const [firstChar, ...rest] = word;
 
   if (rest.length === 0) {
-    return tolerance > 0 || parent[firstChar] ? [result + firstChar] : [null];
+    return tolerance > 0 || parent[firstChar] ? [result + firstChar] : [];
   }
 
   return Object.keys(parent)
@@ -25,8 +34,7 @@ const findSimilar = (word, parent, tolerance, result = '') => {
         result + c
       )
     )
-    .reduce((acc, item) => acc.concat(item), [])
-    .filter(x => x !== null);
+    .reduce((acc, item) => acc.concat(item), []);
 };
 
 const getCommonLetters = (a, b) =>
@@ -35,11 +43,15 @@ const getCommonLetters = (a, b) =>
     .filter((x, idx) => x === b[idx])
     .join('');
 
-module.exports = lines => {
-  for (let i = 0; i < lines.length; i++) {
-    const word = lines[i];
-    const [similar] = findSimilar(word, tree, 1);
-    if (similar) return getCommonLetters(similar, word);
-    addWord(word);
-  }
-};
+module.exports = pipe(
+  reduceWhile(
+    c(isEmpty, prop('similars')),
+    ({words}, next) => ({
+      similars: findSimilar(next, words, 1),
+      words: addWord(next, words),
+      latest: next,
+    }),
+    {words: {}, similars: [], latest: ''}
+  ),
+  converge(getCommonLetters, [prop('latest'), c(head, prop('similars'))])
+);
