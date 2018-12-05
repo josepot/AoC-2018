@@ -1,25 +1,51 @@
-const {last, map, pipe, reduce, sort, sum, values} = require('ramda');
+const {pipe, min, head, length, range} = require('ramda');
 
-const parseLine = line => {
-  const [, rawDate, message] = line.match(/^\[(.*)]\s(.*)$/);
-  const minute = parseInt(rawDate.split(' ')[1].split(':')[1]);
-  const time = new Date(rawDate).getTime();
-  const [id, isAwake] = message.startsWith('Guard')
-    ? [parseInt(message.split(' ')[1].slice(1)), null]
-    : [null, message.startsWith('wakes')];
-  return {
-    id,
-    time,
-    rawDate,
-    isAwake,
-    minute,
-    line,
-  };
+const removeDuplicates = arr => {
+  const indexes = [];
+  for (let i = 0; i < arr.length - 1; i++) {
+    if (Math.abs(arr[i] - arr[i + 1]) === 32) {
+      indexes.push(i++);
+    }
+  }
+
+  let nRemoved = 0;
+  indexes.forEach(i => {
+    arr.splice(i - nRemoved, 2);
+    nRemoved += 2;
+  });
+  return arr;
+};
+const removeAll = arr => {
+  let prevLen = arr.length;
+  do {
+    prevLen = arr.length;
+    removeDuplicates(arr);
+  } while (arr.length !== prevLen);
+  return arr;
 };
 
-const solution1 = pipe();
+const getNChar = (arr, charCode) => {
+  const res = removeAll(
+    arr.filter(i => !(i === charCode || i === charCode + 32))
+  );
+  return res.length;
+};
+
+const solution1 = pipe(
+  head,
+  x => x.split('').map(x => x.charCodeAt(0)),
+  removeAll,
+  length
+);
 
 const solution2 = pipe(
+  head,
+  x => x.split('').map(x => x.charCodeAt(0)),
+  arr => {
+    return range(0, 32)
+      .map(charCode => getNChar(arr, charCode + 65))
+      .reduce(min);
+  }
 );
 
 module.exports = [solution1, solution2];
