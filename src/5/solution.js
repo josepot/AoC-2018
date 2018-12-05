@@ -1,51 +1,63 @@
-const {pipe, min, head, length, range} = require('ramda');
+const {doubleLinkedList, countNodes} = require('../utils/linkedLists');
+const {pipe, head, range, min} = require('ramda');
 
-const removeDuplicates = arr => {
-  const indexes = [];
-  for (let i = 0; i < arr.length - 1; i++) {
-    if (Math.abs(arr[i] - arr[i + 1]) === 32) {
-      indexes.push(i++);
+const UPPER_CASE_A = 65;
+const LOWER_CASE_A = 97;
+const CASE_DIFF = LOWER_CASE_A - UPPER_CASE_A;
+
+const areEquivalent = (a, b) => Math.abs(a - b) === CASE_DIFF;
+
+const removeDuplicates = firstNode => {
+  let initialNode = firstNode;
+  let current = initialNode;
+
+  while (current && current.next) {
+    if (areEquivalent(current.value, current.next.value)) {
+      if (current.prev) {
+        current.prev.next = current.next.next;
+        if (current.next.next) {
+          current.next.next.prev = current.prev;
+        }
+        current = current.prev;
+      } else {
+        initialNode = current.next.next;
+        if (initialNode) {
+          initialNode.prev = null;
+        }
+        current = initialNode;
+      }
+    } else {
+      current = current.next;
     }
   }
 
-  let nRemoved = 0;
-  indexes.forEach(i => {
-    arr.splice(i - nRemoved, 2);
-    nRemoved += 2;
-  });
-  return arr;
-};
-const removeAll = arr => {
-  let prevLen = arr.length;
-  do {
-    prevLen = arr.length;
-    removeDuplicates(arr);
-  } while (arr.length !== prevLen);
-  return arr;
+  return initialNode;
 };
 
-const getNChar = (arr, charCode) => {
-  const res = removeAll(
-    arr.filter(i => !(i === charCode || i === charCode + 32))
-  );
-  return res.length;
-};
+const react = pipe(
+  doubleLinkedList,
+  head,
+  removeDuplicates
+);
+const countAfterReact = pipe(
+  react,
+  countNodes
+);
 
 const solution1 = pipe(
   head,
   x => x.split('').map(x => x.charCodeAt(0)),
-  removeAll,
-  length
+  countAfterReact
 );
 
 const solution2 = pipe(
   head,
   x => x.split('').map(x => x.charCodeAt(0)),
-  arr => {
-    return range(0, 32)
-      .map(charCode => getNChar(arr, charCode + 65))
-      .reduce(min);
-  }
+  arr =>
+    range(UPPER_CASE_A, LOWER_CASE_A)
+      .map(c => arr.filter(i => i !== c && i !== c + CASE_DIFF))
+      .map(countAfterReact)
+      .reduce(min)
 );
 
 module.exports = [solution1, solution2];

@@ -13,11 +13,24 @@ const doubleLinkedList = isCircular => values => {
   const instances = linkedList(isCircular)(values);
   let [node] = instances;
   node.prev = null;
-  while (node && !node.next.prev) {
+  while (node && node.next && !node.next.prev) {
     node.next.prev = node;
     node = node.next;
   }
   return instances;
+};
+
+const countNodes = initialNode => {
+  if (!initialNode) return 0;
+
+  let curr = initialNode;
+  let count = 0;
+
+  while (curr) {
+    count++;
+    curr = curr.next;
+  }
+  return count;
 };
 
 module.exports = {
@@ -25,4 +38,5 @@ module.exports = {
   circularLinkedList: linkedList(true),
   doubleLinkedList: doubleLinkedList(false),
   doubleCircularLinkedList: doubleLinkedList(false),
+  countNodes,
 };
