@@ -32,7 +32,7 @@ const getLines = (xMin, yMin, data) => {
     }
   }
   data.forEach(([x, y]) => {
-    lines[x - xMin][y - yMin] = '#';
+    lines[y - yMin][x - xMin] = '#';
   });
   return lines;
 };
@@ -56,9 +56,6 @@ const solution1 = lines => {
     data = data.map(getNextLine);
     count++;
     distances = getMaxDistance(data);
-    console.log('');
-    console.log('END');
-    console.log('');
   } while (distances.x < MAX && distances.y < MAX);
 };
 
