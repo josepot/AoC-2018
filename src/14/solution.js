@@ -1,25 +1,22 @@
-const {doubleCircularLinkedList} = require('../utils/linkedLists');
+const {circularLinkedList} = require('../utils/linkedLists');
 
 const solution1 = lines => {
   const input = parseInt(lines[0]);
-  const initialNode = doubleCircularLinkedList([3, 7])[0];
-  let lastNode = initialNode.prev;
+  const initialNode = circularLinkedList([3, 7])[0];
+  let lastNode = initialNode.next;
   const elves = [initialNode, initialNode.next];
   let nAdded = 0;
   do {
-    const values = elves.map(x => x.value);
-    const nextNumbers = (values[0] + values[1])
-      .toString(10)
-      .split('')
-      .map(x => parseInt(x));
+    const values = [elves[0].value, elves[1].value];
+    const sum = elves[0].value + elves[1].value;
+    const nextNumbers = sum > 9 ? [Math.trunc(sum / 10), sum % 10] : [sum];
+
     nAdded += nextNumbers.length;
     nextNumbers.forEach(x => {
       const node = {
         value: x,
-        prev: lastNode,
         next: initialNode,
       };
-      initialNode.prev = node;
       lastNode.next = node;
       lastNode = node;
     });
@@ -43,18 +40,16 @@ const solution2 = lines => {
   const targetStr = lines[0];
   const target = [...targetStr].map(x => parseInt(x));
 
-  const initialNode = doubleCircularLinkedList([3, 7])[0];
-  let lastNode = initialNode.prev;
+  const initialNode = circularLinkedList([3, 7])[0];
+  let lastNode = initialNode.next;
   const elves = [initialNode, initialNode.next];
+  let totalLen = elves.length;
   let matched = [];
-  let totalLen = 2;
 
   do {
-    const values = elves.map(x => x.value);
-    const nextNumbers = (values[0] + values[1])
-      .toString(10)
-      .split('')
-      .map(x => parseInt(x));
+    const values = [elves[0].value, elves[1].value];
+    const sum = elves[0].value + elves[1].value;
+    const nextNumbers = sum > 9 ? [Math.trunc(sum / 10), sum % 10] : [sum];
 
     for (let nn = 0; nn < nextNumbers.length; nn++) {
       const value = nextNumbers[nn];
@@ -71,9 +66,8 @@ const solution2 = lines => {
 
       if (matched.length === target.length) return totalLen - target.length;
 
-      const node = {value, prev: lastNode, next: initialNode};
+      const node = {value, next: initialNode};
 
-      initialNode.prev = node;
       lastNode.next = node;
       lastNode = node;
     }
