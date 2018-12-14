@@ -37,6 +37,6 @@ module.exports = {
   linkedList: linkedList(false),
   circularLinkedList: linkedList(true),
   doubleLinkedList: doubleLinkedList(false),
-  doubleCircularLinkedList: doubleLinkedList(false),
+  doubleCircularLinkedList: doubleLinkedList(true),
   countNodes,
 };

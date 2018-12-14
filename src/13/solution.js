@@ -1,71 +1,96 @@
-const SIZE = 7;
-const grid = new Array(SIZE * SIZE);
-const getIdx = (x, y) => y * SIZE + x;
-const getPosition = ({x, y}) => grid[getIdx(x, y)];
-const setPosition = (x, y, val) => (grid[getIdx(x, y)] = val);
+const {doubleCircularLinkedList} = require('../utils/linkedLists');
+
+let N_COLS;
+let N_ROWS;
+let grid;
+
+const getIdx = (x, y) => y * N_COLS + x;
+const getPosition = ({x, y}, from = grid) => from[getIdx(x, y)];
+const setPosition = (x, y, val, to = grid) => (to[getIdx(x, y)] = val);
 
 let cars = [];
 
-const turn = left => {
-  const [a, b] = left ? ['x', 'y'] : ['y', 'x'];
-  return car => {
-    const multiplier = car.direction[a] === 0 ? 1 : -1;
-    car.direction = {
-      [a]: car.direction[b],
-      [b]: car.direction[a] * multiplier,
-    };
-    return car;
-  };
+const [UP, RIGHT, DOWN, LEFT] = ['^', '>', 'v', '<'];
+const directions = [UP, RIGHT, DOWN, LEFT];
+const linkedDirections = doubleCircularLinkedList(directions);
+const directionDiffs = {
+  [UP]: {y: -1, x: 0},
+  [DOWN]: {y: 1, x: 0},
+  [LEFT]: {y: 0, x: -1},
+  [RIGHT]: {y: 0, x: 1},
 };
-const [turnLeft, turnRight] = [true, false].map(turn);
 
-const intructions = {
+const processInput = lines => {
+  N_ROWS = lines.length;
+  N_COLS = lines[0].length;
+  grid = new Array(N_COLS * N_ROWS);
+  lines.forEach((line, y) =>
+    line.split('').forEach((val, x) => {
+      if (val === '|' || val === '-') return setPosition(x, y, '·');
+      const directionIdx = directions.indexOf(val);
+      if (directionIdx === -1) return setPosition(x, y, val);
+
+      cars.push({x, y, turns: -1, direction: linkedDirections[directionIdx]});
+      setPosition(x, y, '·');
+    })
+  );
+};
+
+const print = () => {
+  console.log('');
+  const copy = grid.slice(0);
+  cars.forEach(({x, y, direction}) => {
+    setPosition(x, y, direction.value, copy);
+  });
+
+  copy
+    .reduce((acc, val, idx) => {
+      const x = idx % N_COLS;
+      if (x === 0) {
+        acc.push([val]);
+        return acc;
+      }
+      acc[acc.length - 1].push(val);
+      return acc;
+    }, [])
+    .map(chars => chars.join(''))
+    .forEach(line => console.log(line));
+  console.log('');
+};
+
+const [turnLeft, turnRight] = ['prev', 'next'].map(direction => car => {
+  car.direction = car.direction[direction];
+  return car;
+});
+
+const instructions = {
   '+': car => {
     const direction = ++car.turns % 3;
     if (direction === 1) return car;
     return (direction === 0 ? turnLeft : turnRight)(car);
   },
-  '\\': car => (car.direction.x === 0 ? turnLeft : turnRight)(car),
-  '/': car => (car.direction.x === 0 ? turnRight : turnLeft)(car),
+  '\\': car =>
+    ([UP, DOWN].indexOf(car.direction.value) > -1 ? turnLeft : turnRight)(car),
+  '/': car =>
+    ([UP, DOWN].indexOf(car.direction.value) > -1 ? turnRight : turnLeft)(car),
+  '·': car => car,
 };
 
 const moveCar = car => {
-  car.x += car.direction.x;
-  car.y += car.direction.y;
+  const {x, y} = directionDiffs[car.direction.value];
+  car.x += x;
+  car.y += y;
 
-  const instruction = getPosition(car);
-  return instruction === null ? car : intructions[instruction](car);
+  return instructions[getPosition(car)](car);
 };
 
-const compareCars = (a, b) => {
-  if (a.y !== b.y) return a.y - b.y;
-  return a.x - b.x;
-};
-
-const directions = {
-  '^': {x: 0, y: -1},
-  v: {x: 0, y: 1},
-  '>': {x: 1, y: 0},
-  '<': {x: -1, y: 0},
-};
-const processInput = lines =>
-  lines.forEach((line, y) =>
-    line.split('').forEach((val, x) => {
-      if (val === '|' || val === '-') return setPosition(x, y, null);
-
-      const direction = directions[val];
-      if (!direction) return setPosition(x, y, val);
-
-      cars.push({x, y, turns: -1, direction});
-      setPosition(x, y, null);
-    })
-  );
+const compareCars = (a, b) => getIdx(a.x, a.y) - getIdx(b.x, b.y);
 
 const solution1 = lines => {
   processInput(lines);
-  cars.sort(compareCars);
   let firstCrash;
   do {
+    // print();
     cars = cars.map(moveCar).sort(compareCars);
     firstCrash = cars
       .slice(1)
