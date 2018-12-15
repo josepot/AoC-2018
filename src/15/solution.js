@@ -18,16 +18,12 @@ const getAvailableSquares = ({x, y}, myKind) =>
     .filter(x => !walls.has(x) && !myKind.has(x));
 
 const getEnemyInfo = (myIdx, myKind, enemies) => {
+  const visited = new Set();
   const queue = new PQ((b, a) => {
     if (a.steps !== b.steps) return a.steps - b.steps;
     return a.id - b.id;
   });
-  const visited = new Set();
-  queue.enq({
-    steps: 0,
-    id: myIdx,
-    prev: null,
-  });
+  queue.enq({steps: 0, id: myIdx, prev: null});
   visited.add(myIdx);
 
   let enemyId;
@@ -35,10 +31,12 @@ const getEnemyInfo = (myIdx, myKind, enemies) => {
   do {
     current = queue.deq();
     const newOnes = getAvailableSquares(getPositionFromId(current.id), myKind);
-    enemyId = newOnes
+
+    [enemyId] = newOnes
       .filter(n => enemies.has(n))
-      .sort((a, b) => enemies.get(a).points - enemies.get(b).points)[0];
+      .sort((a, b) => enemies.get(a).points - enemies.get(b).points);
     if (enemyId != null) break;
+
     newOnes
       .filter(x => !visited.has(x))
       .forEach(n => {
@@ -101,36 +99,72 @@ const round = (elves, goblins, elvesPower = 3, stopOnElfDead = false) => {
     })),
   ].sort((a, b) => a.id - b.id);
 
-  let newPositionChanged = false;
-
   for (let i = 0; i < allKeys.length; i++) {
-    if (goblins.size === 0 || elves.size === 0)
-      return [newPositionChanged, false];
+    if (goblins.size === 0 || elves.size === 0) return false;
+
     const {id, myKind, enemies, power} = allKeys[i];
     if (!myKind.has(id)) continue;
 
     const enemyInfo = getEnemyInfo(id, myKind, enemies);
-
     if (!enemyInfo) continue;
+
     const {moveTo, enemyId, shouldAttack} = enemyInfo;
     if (moveTo) {
-      newPositionChanged = true;
       const me = myKind.get(id);
       myKind.delete(id);
       me.id = moveTo;
       Object.assign(me, getPositionFromId(moveTo));
       myKind.set(moveTo, me);
     }
+
     if (shouldAttack) {
       const success = attack(enemyId, enemies, power);
-      if (stopOnElfDead && success && enemies === elves) return [true, false];
-      newPositionChanged = success || newPositionChanged;
+      if (stopOnElfDead && success && enemies === elves) return false;
     }
   }
-
-  return [newPositionChanged, true];
+  return true;
 };
 
+const solution1 = lines => {
+  const {elves, goblins} = processInput(lines);
+  let rounds = 0;
+  let playing = false;
+  do {
+    rounds++;
+    playing = round(elves, goblins);
+  } while (playing);
+  const totalPoints = [...elves.values(), ...goblins.values()].reduce(
+    (acc, f) => acc + f.points,
+    0
+  );
+  return --rounds * totalPoints;
+};
+
+const solution2 = lines => {
+  let elvesPower = 3;
+  let rounds, elves, goblins;
+  do {
+    rounds = 0;
+    let playing = false;
+    const inputData = processInput(lines);
+    elves = inputData.elves;
+    goblins = inputData.goblins;
+    elvesPower++;
+    do {
+      rounds++;
+      playing = round(elves, goblins, elvesPower, true);
+    } while (playing);
+  } while (goblins.size > 0);
+  const totalPoints = [...elves.values(), ...goblins.values()].reduce(
+    (acc, f) => acc + f.points,
+    0
+  );
+  return --rounds * totalPoints;
+};
+
+module.exports = [solution1, solution2];
+
+/*
 const print = (elves, goblins) => {
   R.range(0, N_ROWS)
     .map(y =>
@@ -161,42 +195,4 @@ const print = (elves, goblins) => {
     .forEach(line => console.log(line));
   console.log('');
 };
-
-const solution1 = lines => {
-  const {elves, goblins} = processInput(lines);
-  let rounds = 0;
-  let playing = false;
-  do {
-    rounds++;
-    [, playing] = round(elves, goblins);
-  } while (playing);
-  const totalPoints = [...elves.values(), ...goblins.values()].reduce(
-    (acc, f) => acc + f.points,
-    0
-  );
-  return --rounds * totalPoints;
-};
-
-const solution2 = lines => {
-  let elvesPower = 3;
-  let rounds, elves, goblins;
-  do {
-    rounds = 0;
-    let playing = false;
-    const inputData = processInput(lines);
-    elves = inputData.elves;
-    goblins = inputData.goblins;
-    elvesPower++;
-    do {
-      rounds++;
-      [, playing] = round(elves, goblins, elvesPower, true);
-    } while (playing);
-  } while (goblins.size > 0);
-  const totalPoints = [...elves.values(), ...goblins.values()].reduce(
-    (acc, f) => acc + f.points,
-    0
-  );
-  return --rounds * totalPoints;
-};
-
-module.exports = [solution1, solution2];
+*/
