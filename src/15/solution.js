@@ -4,8 +4,6 @@ const PQ = require('priorityqueuejs');
 let N_COLS;
 let N_ROWS;
 const walls = new Set();
-const elfs = new Map();
-const goblins = new Map();
 
 const getIdx = (x, y) => y * N_COLS + x;
 const getPositionFromId = id => {
@@ -62,6 +60,8 @@ const getEnemyInfo = (myIdx, myKind, enemies) => {
 };
 
 const processInput = lines => {
+  const elves = new Map();
+  const goblins = new Map();
   N_ROWS = lines.length;
   N_COLS = lines[0].length;
   R.range(0, N_COLS).forEach(x => walls.add(getIdx(x, -1)));
@@ -70,32 +70,43 @@ const processInput = lines => {
       const id = getIdx(x, y);
       if (val === '#') return walls.add(id);
       if (val === '.') return;
-      const collection = val === 'G' ? goblins : elfs;
+      const collection = val === 'G' ? goblins : elves;
       collection.set(id, {id, x, y, points: 200});
     })
   );
+  return {elves, goblins};
 };
 
-const attack = (targetId, enemies) => {
+const attack = (targetId, enemies, power) => {
   const target = enemies.get(targetId);
-  target.points -= 3;
+  target.points -= power;
   if (target.points > 0) return false;
   enemies.delete(targetId);
   return true;
 };
 
-const round = () => {
+const round = (elves, goblins, elvesPower = 3, stopOnElfDead = false) => {
   const allKeys = [
-    ...[...goblins.keys()].map(id => ({id, myKind: goblins, enemies: elfs})),
-    ...[...elfs.keys()].map(id => ({id, myKind: elfs, enemies: goblins})),
+    ...[...goblins.keys()].map(id => ({
+      id,
+      myKind: goblins,
+      enemies: elves,
+      power: 3,
+    })),
+    ...[...elves.keys()].map(id => ({
+      id,
+      myKind: elves,
+      enemies: goblins,
+      power: elvesPower,
+    })),
   ].sort((a, b) => a.id - b.id);
 
   let newPositionChanged = false;
 
   for (let i = 0; i < allKeys.length; i++) {
-    if (goblins.size === 0 || elfs.size === 0)
+    if (goblins.size === 0 || elves.size === 0)
       return [newPositionChanged, false];
-    const {id, myKind, enemies} = allKeys[i];
+    const {id, myKind, enemies, power} = allKeys[i];
     if (!myKind.has(id)) continue;
 
     const enemyInfo = getEnemyInfo(id, myKind, enemies);
@@ -110,27 +121,30 @@ const round = () => {
       Object.assign(me, getPositionFromId(moveTo));
       myKind.set(moveTo, me);
     }
-    if (shouldAttack)
-      newPositionChanged = attack(enemyId, enemies) || newPositionChanged;
+    if (shouldAttack) {
+      const success = attack(enemyId, enemies, power);
+      if (stopOnElfDead && success && enemies === elves) return [true, false];
+      newPositionChanged = success || newPositionChanged;
+    }
   }
 
   return [newPositionChanged, true];
 };
 
-const print = () => {
+const print = (elves, goblins) => {
   R.range(0, N_ROWS)
     .map(y =>
       R.range(0, N_COLS)
         .map(x => {
           const id = getIdx(x, y);
           if (walls.has(id)) return '#';
-          if (elfs.has(id)) return 'E';
+          if (elves.has(id)) return 'E';
           if (goblins.has(id)) return 'G';
           return '.';
         })
         .map((c, x) => {
           if (c === '.' || c === '#') return [c, null];
-          const collection = c === 'E' ? elfs : goblins;
+          const collection = c === 'E' ? elves : goblins;
           return [c, `${c}(${collection.get(getIdx(x, y)).points})`];
         })
         .reduce(
@@ -149,23 +163,14 @@ const print = () => {
 };
 
 const solution1 = lines => {
-  processInput(lines);
-
+  const {elves, goblins} = processInput(lines);
   let rounds = 0;
-  let positionChanged = true;
   let playing = false;
-  // print();
   do {
     rounds++;
-    [positionChanged, playing] = round(positionChanged);
-    /*
-    if (positionChanged) {
-      console.log(rounds);
-      print();
-    }
-    */
+    [, playing] = round(elves, goblins);
   } while (playing);
-  const totalPoints = [...elfs.values(), ...goblins.values()].reduce(
+  const totalPoints = [...elves.values(), ...goblins.values()].reduce(
     (acc, f) => acc + f.points,
     0
   );
@@ -173,7 +178,25 @@ const solution1 = lines => {
 };
 
 const solution2 = lines => {
-  return lines;
+  let elvesPower = 3;
+  let rounds, elves, goblins;
+  do {
+    rounds = 0;
+    let playing = false;
+    const inputData = processInput(lines);
+    elves = inputData.elves;
+    goblins = inputData.goblins;
+    elvesPower++;
+    do {
+      rounds++;
+      [, playing] = round(elves, goblins, elvesPower, true);
+    } while (playing);
+  } while (goblins.size > 0);
+  const totalPoints = [...elves.values(), ...goblins.values()].reduce(
+    (acc, f) => acc + f.points,
+    0
+  );
+  return --rounds * totalPoints;
 };
 
 module.exports = [solution1, solution2];
