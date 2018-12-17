@@ -55,19 +55,19 @@ const procesLines = lines => {
     }
   );
 
-  N_COLS = corners.x.max - corners.x.min + 1;
+  N_COLS = corners.x.max - corners.x.min + 3;
   N_ROWS = corners.y.max - corners.y.min + 1;
 
   rawInfo
     .map(line => {
       if (line.type === VERTICAL) {
-        line.start -= corners.x.min;
+        line.start -= corners.x.min - 1;
         line.range[0] -= corners.y.min;
         line.range[1] -= corners.y.min;
       } else {
         line.start -= corners.y.min;
-        line.range[0] -= corners.x.min;
-        line.range[1] -= corners.x.min;
+        line.range[0] -= corners.x.min - 1;
+        line.range[1] -= corners.x.min - 1;
       }
       return line;
     })
@@ -78,7 +78,7 @@ const procesLines = lines => {
         walls.add(getIdx(position));
       }
     });
-  spring = getIdx({x: 500 - corners.x.min, y: 0});
+  spring = getIdx({x: 501 - corners.x.min, y: 0});
   water.add(spring);
 };
 
@@ -133,22 +133,15 @@ const propagateWater = () => {
       lastIdxPos = getIdx(lastPosition);
       if (walls.has(lastIdxPos) || water.has(lastIdxPos)) {
         fillUpTank(
-          Object.assign(
-            {y: walls.has(lastIdxPos) ? lastPosition.y - 1 : lastPosition.y},
-            lastPosition
-          )
+          Object.assign(lastPosition, {
+            y: walls.has(lastIdxPos) ? lastPosition.y - 1 : lastPosition.y,
+          })
         )
           .filter(x => !allStreams.has(x))
           .forEach(x => {
             allStreams.add(x);
             streams.add(x);
           });
-        /*
-        if (++count === 30) {
-          print();
-          throw null;
-        }
-        */
         break;
       }
       water.add(lastIdxPos);
@@ -175,10 +168,30 @@ const print = () => {
 const solution1 = lines => {
   procesLines(lines);
   propagateWater();
-  print();
-  return [...water]
-    .map(getPositionFromIdx)
-    .filter(({x, y}) => x > -1 && y > -1 && x < N_COLS && y < N_ROWS).length;
+  // print();
+  return water.size;
 };
 
-module.exports = [solution1];
+const getStreamSize = start => {
+  let count = 0;
+  const position = getPositionFromIdx(start);
+  while (
+    position.y < N_ROWS &&
+    !water.has(getIdx({x: position.x - 1, y: position.y})) &&
+    !water.has(getIdx({x: position.x + 1, y: position.y}))
+  ) {
+    count++;
+    position.y++;
+  }
+  return count;
+};
+
+const getStreamsSize = () =>
+  [...allStreams].map(getStreamSize).reduce((a, b) => a + b);
+
+const solution2 = lines => {
+  solution1(lines);
+  return water.size - getStreamsSize();
+};
+
+module.exports = [solution1, solution2];
