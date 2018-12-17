@@ -14,10 +14,14 @@ const log = v => {
 };
 const readFile = promisify(fs.readFile);
 const getLines = c(init, split('\n'));
+const clearScreen = () => {
+  console.clear();
+  console.clear();
+};
 
 const [, , day, isSecond] = process.argv;
 const fn = require(`./${day}/solution`)[isSecond ? 1 : 0];
 
 readFile(`./${day}/input`, 'utf-8').then(
-  c(log, fn, tap(() => (start = Date.now())), getLines)
+  c(log, fn, tap(() => (start = Date.now())), getLines, tap(clearScreen))
 );

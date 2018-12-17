@@ -8,6 +8,7 @@ let N_COLS;
 let N_ROWS;
 const walls = new Set();
 const water = new Set();
+const allStreams = new Set();
 
 const getIdx = ({x, y}) => y * N_COLS + x;
 const getPositionFromIdx = id => {
@@ -71,28 +72,35 @@ const procesLines = lines => {
       return line;
     })
     .forEach(({type, start, range}) => {
-      console.log(type, start, range);
-      const len = range[1] - range[0];
       const [fixed, variant] = type === VERTICAL ? ['x', 'y'] : ['y', 'x'];
-      for (let i = range[0]; i < len; i++) {
-        const position = {[fixed]: start, [variant]: range[0] + i};
-        console.log(position);
+      for (let i = range[0]; i < range[1] + 1; i++) {
+        const position = {[fixed]: start, [variant]: i};
         walls.add(getIdx(position));
       }
     });
   spring = getIdx({x: 500 - corners.x.min, y: 0});
+  water.add(spring);
 };
 
 const findEnd = (position, direction) => {
+  let nextPosition = Object.assign({}, position);
   do {
-    const nextPosition = Object.assign({}, position);
+    nextPosition.x += direction;
     const nextPositionIdx = getIdx(nextPosition);
 
-    nextPosition.x += direction;
-    if (walls.has(nextPositionIdx)) return [position, false];
+    if (walls.has(nextPositionIdx)) return [nextPositionIdx, false];
     water.add(nextPositionIdx);
-    if (!walls.has(getIdx({x: nextPosition.x, y: nextPosition.y + 1}))) {
-      return [position, true];
+    const positionBelow = getIdx({x: nextPosition.x, y: nextPosition.y + 1});
+    if (!walls.has(positionBelow) && !water.has(positionBelow)) {
+      const previous = getIdx({
+        x: nextPosition.x - direction,
+        y: nextPosition.y,
+      });
+      if (allStreams.has(previous)) {
+        water.delete(nextPositionIdx);
+        return [previous, true];
+      }
+      return [nextPositionIdx, true];
     }
   } while (true);
 };
@@ -100,6 +108,7 @@ const findEnd = (position, direction) => {
 const fillUpTank = position => {
   const result = [];
   do {
+    water.add(getIdx(position));
     const [endLeft, isLeftStream] = findEnd(position, -1);
     const [endRight, isRightStream] = findEnd(position, 1);
 
@@ -110,19 +119,36 @@ const fillUpTank = position => {
   return result;
 };
 
+// let count = 0;
 const propagateWater = () => {
-  let streams = [spring];
-  while (streams.length > 0) {
-    const idx = streams.shift();
+  allStreams.add(spring);
+  let streams = new Set([spring]);
+  while (streams.size > 0) {
+    const idx = streams.values().next().value;
+    streams.delete(idx);
     let lastIdxPos = idx;
     let lastPosition = getPositionFromIdx(idx);
     do {
       lastPosition.y++;
       lastIdxPos = getIdx(lastPosition);
-      if (walls.has(lastIdxPos)) {
-        streams.push(...fillUpTank(Object.assign({}, lastPosition)));
-        break;
-      } else if (water.has(lastIdxPos)) {
+      if (walls.has(lastIdxPos) || water.has(lastIdxPos)) {
+        fillUpTank(
+          Object.assign(
+            {y: walls.has(lastIdxPos) ? lastPosition.y - 1 : lastPosition.y},
+            lastPosition
+          )
+        )
+          .filter(x => !allStreams.has(x))
+          .forEach(x => {
+            allStreams.add(x);
+            streams.add(x);
+          });
+        /*
+        if (++count === 30) {
+          print();
+          throw null;
+        }
+        */
         break;
       }
       water.add(lastIdxPos);
@@ -148,10 +174,11 @@ const print = () => {
 
 const solution1 = lines => {
   procesLines(lines);
-  console.log([...walls].sort((a, b) => a - b));
-  print();
   propagateWater();
-  return water.size;
+  print();
+  return [...water]
+    .map(getPositionFromIdx)
+    .filter(({x, y}) => x > -1 && y > -1 && x < N_COLS && y < N_ROWS).length;
 };
 
 module.exports = [solution1];
