@@ -1,5 +1,3 @@
-const R = require('ramda');
-
 const instructionNames = [
   'addr',
   'addi',
@@ -19,19 +17,9 @@ const instructionNames = [
   'eqrr',
 ];
 
-const registers = [1, 0, 0, 0, 0, 0];
-let ip;
-const ipEnhancer = fn => (...args) => {
-  fn(...args);
-  // tracker.push(registers[ip]);
-  // tracker.splice(0, 1);
-  // if (tracker.join('') === '234578910' && count++ === 100) {
-  //  throw null;
-  // }
-  registers[ip]++;
-  console.log(registers);
-};
+let registers = [0, 0, 0, 0, 0, 0];
 
+let ip;
 const instructions = [
   (a, b, c) => (registers[c] = registers[a] + registers[b]),
   (a, b, c) => (registers[c] = registers[a] + b),
@@ -50,16 +38,22 @@ const instructions = [
   (a, b, c) => (registers[c] = registers[a] === b ? 1 : 0),
   (a, b, c) => (registers[c] = registers[a] === registers[b] ? 1 : 0),
 ];
+const ipEnhancer = (fnIdx, args) => () => {
+  // console.log(instructionNames[fnIdx], ...args);
+  // console.log(registers);
+  instructions[fnIdx](...args);
+  registers[ip]++;
+  // console.log(registers);
+  // console.log();
+};
 
 const solution1 = lines => {
   ip = parseInt(lines[0].split(' ')[1], 10);
   const fns = lines.slice(1).map(line => {
     const [name, ...vals] = line.split(' ');
-    const idx = instructionNames.indexOf(name);
-
-    return ipEnhancer(instructions[idx]).bind(
-      null,
-      ...vals.map(x => parseInt(x, 10))
+    return ipEnhancer(
+      instructionNames.indexOf(name),
+      vals.map(x => parseInt(x, 10))
     );
   });
   while (registers[ip] < fns.length) {
@@ -68,8 +62,27 @@ const solution1 = lines => {
   return registers;
 };
 
-const solution2 = lines => {
-  return lines;
+const solution2 = () => {
+  /*
+do {
+  registers[2] = 1;
+  do {
+    if (registers[2] === registers[4] / registers[5]) {
+      registers[0] += registers[5];
+    }
+    registers[2]++;
+  } while (registers[2] <= registers[4]);
+  registers[5]++;
+} while (registers[5] <= registers[4]);
+*/
+  registers = [0, 2, 0, null, 10551306, 1];
+  do {
+    if (registers[4] % registers[5] === 0) {
+      registers[0] += registers[5];
+    }
+    registers[5]++;
+  } while (registers[5] <= registers[4]);
+  return registers[0];
 };
 
 module.exports = [solution1, solution2];
