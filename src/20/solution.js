@@ -1,11 +1,8 @@
 const Stack = require('../utils/stack');
 
-const distances = new Map([['0-0', 0]]);
+const distances = new Map();
 const groups = new Stack();
 let position = {x: 0, y: 0, distance: 0};
-
-groups.push(Object.assign({}, position));
-distances.set('0-0', 0);
 
 const advance = (xDiff, yDiff) => {
   position.x += xDiff;
@@ -38,4 +35,4 @@ const solve = ([rawInput]) =>
 const solution1 = () => Math.max.apply(null, [...distances.values()]);
 const solution2 = () => [...distances.values()].filter(x => x >= 1000).length;
 
-module.exports = [solution1, solution2].map(countFn => () => countFn(solve()));
+module.exports = [solution1, solution2].map(fn => x => fn(solve(x)));
