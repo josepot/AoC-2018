@@ -22,7 +22,7 @@ const options = {
   S: advance.bind(null, 0, 1),
   W: advance.bind(null, -1, 0),
   '(': () => groups.push(Object.assign({}, position)),
-  '|': () => (position = Object.assign({}, groups.peak())),
+  '|': () => (position = Object.assign({}, groups.peek())),
   ')': () => (position = groups.pop()),
 };
 

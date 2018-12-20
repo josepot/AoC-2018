@@ -13,7 +13,7 @@ module.exports = class Stack {
     return result;
   }
 
-  peak() {
+  peek() {
     return this.current.value;
   }
 };
