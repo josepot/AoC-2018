@@ -1,5 +1,7 @@
 const PQ = require('priorityqueuejs');
 const modulo = 20183;
+const xInc = 16807;
+const yInc = 48271;
 
 let depth;
 let target;
@@ -16,11 +18,8 @@ const setGrid = (x, y) => {
   grid.set(getIdx(x, y), (p1 * p2 + depth) % modulo);
 };
 
-const xInc = 16807;
-const yInc = 48271;
-
 const expand = () => {
-  const squareSize = Math.max(N_COLS, N_ROWS) * 2;
+  const squareSize = Math.ceil(Math.max(N_COLS, N_ROWS) * 1.5);
   const newGridData = new Array(squareSize * squareSize);
   const newVisitedData = [];
 
@@ -41,16 +40,16 @@ const expand = () => {
   N_COLS = squareSize;
   N_ROWS = squareSize;
 
-  let tmp = xInc * xInit;
+  let inc = xInc * xInit;
   for (let x = xInit; x < N_COLS; x++) {
-    setPosition(x, 0, (tmp + depth) % modulo);
-    tmp += xInc;
+    setPosition(x, 0, (inc + depth) % modulo);
+    inc += xInc;
   }
 
-  tmp = yInc * yInit;
+  inc = yInc * yInit;
   for (let y = yInit; y < N_ROWS; y++) {
-    setPosition(0, y, (tmp + depth) % modulo);
-    tmp += yInc;
+    setPosition(0, y, (inc + depth) % modulo);
+    inc += yInc;
   }
 
   for (let y = 1; y < yInit; y++) {
@@ -143,7 +142,6 @@ const getNextSquares = current =>
         time: current.time + timeInc,
         distance: getDistance(x, y),
         equipment,
-        prev: current,
       };
     })
     .filter(({x, y, equipment, time}) => {
@@ -170,7 +168,6 @@ const solution2 = lines => {
     time: 0,
     distance: target[0] + target[1],
     equipment: TORCH,
-    prev: null,
   });
   visited.set(0, new Map([[TORCH, 0]]));
 
@@ -180,15 +177,14 @@ const solution2 = lines => {
       current.equipment = TORCH;
       current.time += 7;
       options.enq(current);
-    } else {
-      const nextSquares = getNextSquares(current);
-      nextSquares.forEach(discovery => {
-        options.enq(discovery);
-        const idx = getIdx(discovery.x, discovery.y);
-        if (!visited.has(idx)) visited.set(idx, new Map());
-        visited.get(idx).set(discovery.equipment, discovery.time);
-      });
+      continue;
     }
+    getNextSquares(current).forEach(discovery => {
+      options.enq(discovery);
+      const idx = getIdx(discovery.x, discovery.y);
+      if (!visited.has(idx)) visited.set(idx, new Map());
+      visited.get(idx).set(discovery.equipment, discovery.time);
+    });
   } while (options.peek().distance > 0 || options.peek().equipment !== TORCH);
   return options.peek().time;
 };
