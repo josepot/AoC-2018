@@ -1,115 +1,86 @@
+const R = require('ramda');
+
+const getDistance = (a, b = [0, 0, 0]) =>
+  Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+
 const solution1 = lines => {
-  const data = lines.map(line => {
+  const bots = lines.map(line => {
     const [, x, y, z, r] = line.match(/pos=<(-?\d+),(-?\d+),(-?\d+)>, r=(\d+)/);
     return [x, y, z, r].map(x => parseInt(x));
   });
 
-  const maxR = data.reduce(
+  const maxR = bots.reduce(
     (acc, [, , , r], idx) => (r > acc[0] ? [r, idx] : acc),
     [0, -1]
   );
 
-  const winner = data[maxR[1]];
+  const winner = bots[maxR[1]];
 
-  return data.reduce(
-    (acc, [x, y, z]) =>
-      Math.abs(x - winner[0]) +
-        Math.abs(y - winner[1]) +
-        Math.abs(z - winner[2]) <=
-      winner[3]
-        ? acc + 1
-        : acc,
+  return bots.reduce(
+    (acc, bot) => (getDistance(winner, bot) <= winner[3] ? acc + 1 : acc),
     0
   );
 };
 
-const getDistance = (a, b) =>
-  Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
-
-const getWinners = (data, from, len) => {
-  let winners = [0, []];
-  for (let x = from[0]; x < from[0] + len; x++) {
-    for (let y = from[1]; y < from[1] + len; y++) {
-      for (let z = from[2]; z < from[2] + len; z++) {
-        const nReachable = data.reduce(
-          (acc, item) =>
-            getDistance(item, [x, y, z]) <= item[3] ? acc + 1 : acc,
-          0
-        );
-        if (nReachable > winners[0]) {
-          winners = [nReachable, [[x, y, z]]];
-        } else if (nReachable === winners[0]) winners[1].push([x, y, z]);
-      }
-    }
-  }
-
-  return winners;
-};
-
 const solution2 = lines => {
-  const originalData = lines.map(line => {
+  const bots = lines.map(line => {
     const [, x, y, z, r] = line.match(/pos=<(-?\d+),(-?\d+),(-?\d+)>, r=(\d+)/);
     return [x, y, z, r].map(x => parseInt(x));
   });
 
-  let division = 10000000;
-
-  let data = originalData.map(x => x.map(xx => Math.round(xx / division)));
-
-  const xMinMax = data.reduce(
-    (acc, [x]) => (x < acc[0] ? [x, acc[1]] : x > acc[1] ? [acc[0], x] : acc),
-    [Infinity, -Infinity]
-  );
-
-  const yMinMax = data.reduce(
-    (acc, [, x]) => (x < acc[0] ? [x, acc[1]] : x > acc[1] ? [acc[0], x] : acc),
-    [Infinity, -Infinity]
-  );
-
-  const zMinMax = data.reduce(
-    (acc, [, , x]) =>
-      x < acc[0] ? [x, acc[1]] : x > acc[1] ? [acc[0], x] : acc,
-    [Infinity, -Infinity]
-  );
-
-  const min = [xMinMax, yMinMax, zMinMax].reduce(
-    (acc, [x]) => (x < acc ? x : acc),
-    Infinity
-  );
-
-  const max = [xMinMax, yMinMax, zMinMax].reduce(
-    (acc, [, x]) => (x > acc ? x : acc),
-    -Infinity
-  );
-
-  let winners = getWinners(data, [min, min, min], max - min + 1);
-  do {
-    division /= 10;
-    data = originalData.map(x => x.map(xx => Math.round(xx / division)));
-    winners = winners[1]
-      .map((winner, idx, arr) => {
-        if (idx % 100 === 0) {
-          console.log('progress', (idx / arr.length) * 100);
-        }
-        return getWinners(data, winner.map(x => x * 10 - 5), 10);
-      })
+  const minsMaxes = [0, 1, 2].map(pos =>
+    bots
+      .map(bot => bot[pos])
       .reduce(
-        (acc, w) => {
-          if (w[0] > acc[0]) return w;
-          if (w[0] === acc[0]) acc[1].push.apply(acc[1], w[1]);
-          return acc;
-        },
-        [0, []]
-      );
-    console.log('division finished', division, winners[0], winners[1]);
-  } while (division > 1);
+        (acc, x) => (x < acc[0] ? [x, acc[1]] : x > acc[1] ? [acc[0], x] : acc),
+        [Infinity, -Infinity]
+      )
+  );
+  const diffs = minsMaxes.map(([min, max]) => max - min);
+  const maxDiff = diffs.reduce((a, b) => Math.max(a, b));
 
-  console.log('sorting winners');
-  const finalWinner = winners[1].sort(
-    (a, b) => getDistance(a, [0, 0, 0]) - getDistance(b, [0, 0, 0])
-  )[0];
-  console.log(finalWinner);
-  return finalWinner.reduce((x, y) => x + y);
+  let gapSize = Math.pow(2, Math.floor(Math.log2(maxDiff)));
+  const nScans = Math.log2(gapSize) + 1;
+
+  let center = minsMaxes.map(([min], idx) => min + Math.floor(diffs[idx] / 2));
+  let winner = [[Infinity, Infinity, Infinity], Infinity];
+  for (let scanN = 0; scanN < nScans; scanN++) {
+    let max = 0;
+
+    const initDiff = gapSize * 2;
+    const gaps = R.range(0, 5).map(x => x * gapSize);
+
+    gaps
+      .map(g => center[0] - initDiff + g)
+      .forEach(x => {
+        gaps
+          .map(g => center[1] - initDiff + g)
+          .forEach(y => {
+            gaps
+              .map(g => center[2] - initDiff + g)
+              .forEach(z => {
+                const current = [x, y, z];
+                const nAtReach = bots.reduce(
+                  (acc, bot) =>
+                    getDistance(bot, current) - bot[3] <= 0 ? acc + 1 : acc,
+                  0
+                );
+
+                if (
+                  nAtReach > max ||
+                  (nAtReach === max && getDistance(current) < winner[1])
+                ) {
+                  max = nAtReach;
+                  winner = [current, getDistance(current)];
+                }
+              });
+          });
+      });
+
+    [center] = winner;
+    gapSize /= 2;
+  }
+  return winner[1];
 };
 
 module.exports = [solution1, solution2];
