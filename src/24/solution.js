@@ -1,3 +1,6 @@
+const LOGS_ON = false;
+const log = LOGS_ON ? console.log : Function.prototype;
+
 const getVulnerabilities = vulnerabilitiesRaw =>
   vulnerabilitiesRaw
     ? vulnerabilitiesRaw
@@ -13,7 +16,7 @@ const getVulnerabilities = vulnerabilitiesRaw =>
         })
     : {weak: new Set(), immune: new Set()};
 
-const getGroupData = (type, lines) => {
+const getGroupData = (type, lines, inc = 0) => {
   return lines.map((line, idx) => {
     const [
       ,
@@ -35,7 +38,7 @@ const getGroupData = (type, lines) => {
     return Object.assign(getVulnerabilities(vulnerabilitiesRaw), {
       nUnits,
       hitPoints,
-      attackPoints,
+      attackPoints: attackPoints + inc,
       attackType,
       initiative,
       type,
@@ -54,7 +57,7 @@ const getAndRemoveDefender = defending => attacker => {
   const [winner, , removeIdx] = defending.reduce(
     ([cWinner, maxDamage, wIdx], defender, idx) => {
       const damage = getDamage(attacker, defender);
-      console.log(
+      log(
         `${attacker.type} group ${attacker.number} would deal defending group ${
           defender.number
         } ${damage} damage`
@@ -95,7 +98,7 @@ const getAttackPairs = (attacking, defendingOriginal) => {
 };
 
 const attack = pairs => {
-  console.log('');
+  log('');
   pairs
     .sort(([a], [b]) => b.initiative - a.initiative)
     .forEach(([attacker, defender]) => {
@@ -107,7 +110,7 @@ const attack = pairs => {
           (damage / (defender.nUnits * defender.hitPoints)) * defender.nUnits
         )
       );
-      console.log(
+      log(
         `${attacker.type} group ${attacker.number} attacks defending group ${
           defender.number
         }, killing ${loses} units`
@@ -116,26 +119,28 @@ const attack = pairs => {
     });
 };
 
-const solution1 = lines => {
+const solution1 = (lines, inc) => {
   const infectionIdx = lines.findIndex(l => l.startsWith('Infection:'));
   const immuneLines = lines.slice(1, infectionIdx - 1);
   const infectionLines = lines.slice(infectionIdx + 1);
 
-  let immuneSystem = getGroupData('Immune System', immuneLines);
+  let immuneSystem = getGroupData('Immune System', immuneLines, inc);
   let infection = getGroupData('Infection', infectionLines);
 
+  let prevImmuneUnits = 0;
+  let prevInfectionUnits = 0;
   do {
-    console.log('');
-    console.log('');
-    console.log('Immune System:');
+    log('');
+    log('');
+    log('Immune System:');
     immuneSystem.forEach(({number, nUnits}) =>
-      console.log(`Group ${number} contains ${nUnits} units`)
+      log(`Group ${number} contains ${nUnits} units`)
     );
-    console.log('Infection:');
+    log('Infection:');
     infection.forEach(({number, nUnits}) =>
-      console.log(`Group ${number} contains ${nUnits} units`)
+      log(`Group ${number} contains ${nUnits} units`)
     );
-    console.log('');
+    log('');
 
     attack([
       ...getAttackPairs(infection, immuneSystem),
@@ -143,16 +148,29 @@ const solution1 = lines => {
     ]);
     immuneSystem = immuneSystem.filter(({nUnits}) => nUnits > 0);
     infection = infection.filter(({nUnits}) => nUnits > 0);
+
+    const currentImmuneUnits = immuneSystem.reduce((a, b) => a + b.nUnits, 0);
+    const currentInfectionUnits = infection.reduce((a, b) => a + b.nUnits, 0);
+
+    if (
+      currentImmuneUnits === prevImmuneUnits &&
+      currentInfectionUnits === prevInfectionUnits
+    )
+      return [null, null];
+    prevImmuneUnits = currentImmuneUnits;
+    prevInfectionUnits = currentInfectionUnits;
   } while (immuneSystem.length > 0 && infection.length > 0);
 
-  return (
-    immuneSystem.reduce((a, b) => a + b.nUnits, 0) +
-    infection.reduce((a, b) => a + b.nUnits, 0)
-  );
+  return [prevImmuneUnits, prevInfectionUnits];
 };
 
 const solution2 = lines => {
-  return lines;
+  let immnuneUnits;
+  let i = 1;
+  do {
+    [immnuneUnits] = solution1(lines, i++);
+  } while (immnuneUnits === 0 || immnuneUnits == null);
+  return immnuneUnits;
 };
 
 module.exports = [solution1, solution2];
