@@ -117,13 +117,9 @@ const attack = pairs => {
 };
 
 const solution1 = lines => {
-  /*
-  const immuneLines = lines.slice(1, 11);
-  const infectionLines = lines.slice(13);
-  */
-
-  const immuneLines = lines.slice(1, 3);
-  const infectionLines = lines.slice(5, 7);
+  const infectionIdx = lines.findIndex(l => l.startsWith('Infection:'));
+  const immuneLines = lines.slice(1, infectionIdx - 1);
+  const infectionLines = lines.slice(infectionIdx + 1);
 
   let immuneSystem = getGroupData('Immune System', immuneLines);
   let infection = getGroupData('Infection', infectionLines);
