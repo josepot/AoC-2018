@@ -1,46 +1,56 @@
-const permutationsIterator = (nItems, groupSize, ...exclusionIdxs) => {
+function* permutationsIterator(nItems, groupSize, ...exclusionIdxs) {
   const exclusions = new Set(exclusionIdxs);
 
   let i = 0;
   while (exclusions.has(i)) i++;
-  let prev;
-  let first = (prev = {val: i++});
+  let last;
+  let first = (last = {val: i++});
   for (; i < nItems; i++) {
     if (exclusions.has(i)) continue;
-    prev.next = {val: i};
-    prev = prev.next;
+    last.next = {val: i, prev: last};
+    last = last.next;
   }
 
-  let lastLevel = {start: first, current: first};
+  let lastLevel = {current: first};
   for (let i = 1; i < groupSize; i++) {
     lastLevel = {
       prev: lastLevel,
-      start: lastLevel.start.next,
-      current: lastLevel.start.next,
+      current: lastLevel.current.next,
     };
+    lastLevel.prev.next = lastLevel;
   }
 
-  const result = [];
+  lastLevel.end = last;
+
+  let level = lastLevel;
+  while (level.prev) {
+    level.prev.end = level.end.prev;
+    level = level.prev;
+  }
 
   do {
     const innerRes = new Array(groupSize);
-    let level = lastLevel;
+    level = lastLevel;
     for (let g = groupSize - 1; g > -1; g--) {
       innerRes[g] = level.current.val;
       level = level.prev;
     }
-    result.push(innerRes);
 
     level = lastLevel;
-    level.current = level.current.next;
-    while (!level.current) {
-      level.current = level.start = level.start.next;
-      if (!level.current) return result;
+    while (level && level.current === level.end) {
       level = level.prev;
-      level.current = level.current.next;
+    }
+
+    if (!level) return yield innerRes;
+    yield innerRes;
+
+    level.current = level.current.next;
+    while (level.next) {
+      level.next.current = level.current.next;
+      level = level.next;
     }
   } while (true);
-};
+}
 
 const solution = (matrix, startIdx) => {
   let distances = {};
@@ -57,27 +67,31 @@ const solution = (matrix, startIdx) => {
   }
 
   for (let groupSize = 2; groupSize < matrix.length - 1; groupSize++) {
+    console.log(groupSize);
     const nextDistances = {};
     for (let main = 0; main < matrix.length; main++) {
       if (main === startIdx) continue;
       nextDistances[main] = {};
-      permutationsIterator(matrix.length, groupSize, startIdx, main).forEach(
-        permutation => {
-          let best = {distance: Infinity, path: ''};
-          for (let i = 0; i < groupSize; i++) {
-            const subMain = permutation[i];
-            const subsetKey = permutation.filter(x => x !== subMain).join(',');
-            const distance =
-              matrix[main][subMain] + distances[subMain][subsetKey].distance;
-            if (distance < best.distance)
-              best = {
-                distance,
-                path: main + ',' + distances[subMain][subsetKey].path,
-              };
-          }
-          nextDistances[main][permutation.join(',')] = best;
+      const g = permutationsIterator(matrix.length, groupSize, startIdx, main);
+
+      let next = g.next();
+      while (!next.done) {
+        const permutation = next.value;
+        let best = {distance: Infinity, path: ''};
+        for (let i = 0; i < groupSize; i++) {
+          const subMain = permutation[i];
+          const subsetKey = permutation.filter(x => x !== subMain).join(',');
+          const distance =
+            matrix[main][subMain] + distances[subMain][subsetKey].distance;
+          if (distance < best.distance)
+            best = {
+              distance,
+              path: main + ',' + distances[subMain][subsetKey].path,
+            };
         }
-      );
+        nextDistances[main][permutation.join(',')] = best;
+        next = g.next();
+      }
     }
     distances = nextDistances;
   }
@@ -130,9 +144,27 @@ matrix[4][1] = 2;
 matrix[4][2] = 9;
 matrix[4][3] = 5;
 matrix[4][4] = 0;
+
+console.log(solution(matrix, 0));
 */
 
-// console.log(solution(matrix, 0));
-// permutationsIterator(6, 3, 0, 3).forEach(x => console.log(x));
+// [...permutationsIterator(6, 2, 0, 2)].forEach(x => console.log(x));
+/*
+const N = 20;
+const matrix = new Array(N);
+console.log('populating data');
+for (let i = 0; i < N; i++) matrix[i] = new Array(N);
+for (let i = 0; i < N; i++) matrix[i][i] = 0;
+
+for (let x = 0; x < N - 1; x++) {
+  for (let y = x + 1; y < N; y++) {
+    matrix[x][y] = Math.floor(Math.random() * 1000);
+    matrix[y][x] = matrix[x][y];
+  }
+}
+
+console.log('solving problem');
+console.log(solution(matrix, 0));
+*/
 
 module.exports = solution;
